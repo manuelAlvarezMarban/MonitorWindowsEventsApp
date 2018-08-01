@@ -1,7 +1,7 @@
 # MonitorWindowsEventsApp
 Multi-thread app for monitoring Windows Events of N hosts and send info by Syslog protocol to any final server.
 
-The app uses the PyWin modules for integrating Python and Windows in order to get Windows Events info of all established host, 
+The app uses the PyWin modules for integrating Python and Windows in order to get Windows Events info of all established hosts, 
 a Queue manager takes care of sending this info by Syslog protocol (RFC 5424) to any server or log collector you have for BI or data use. 
 With sending interval for server health care and auto-adjust for data bursts, etc.
 
