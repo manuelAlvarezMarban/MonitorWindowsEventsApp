@@ -1,5 +1,5 @@
 # MonitorWindowsEventsApp
-Multi-thread app for monitoring Windows Events of N hosts and send info by Syslog protocol to any final server.
+Multi-thread app for real-time monitoring Windows Events of N hosts and send info by Syslog protocol to any final server.
 
 The app uses the PyWin modules for integrating Python and Windows in order to get Windows Events info of all established hosts, 
 a Queue manager takes care of sending this info by Syslog protocol (RFC 5424) to any server or log collector you have for BI or data use. 
@@ -14,7 +14,7 @@ EventTag (System, Application or Security), EventContent and AppTimestamp. -*JSO
 - Python path added to environment variables of Windows (automatic with Python last versions installation) 
 
 ## Installing - Run:
-Only execute the startApp batch script. (must be in the project folder)
+Only execute the startApp batch script. (Must be in the project folder)
 
 ## Configuration:
 *Edit the Config.ini file under Config folder.*
