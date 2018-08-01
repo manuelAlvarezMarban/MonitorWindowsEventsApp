@@ -5,8 +5,8 @@ The app uses the PyWin modules for integrating Python and Windows in order to ge
 a Queue manager takes care of sending this info by Syslog protocol (RFC 5424) to any server or log collector you have for BI or data use. 
 With sending interval for server health care and auto-adjust for data bursts, etc.
 
-The data gathered of Windows Events is: EventDate, UserSid, ProcessSource, HostSource (defined in Confing.ini), Category, ID, Type, 
-EventTag (System, Application or Security), EventContent and AppTimestamp. *JSON inside the UDP Syslog message*
+The data gathered of Windows Events is: EventDate, UserSid, ProcessSource, HostSource (defined in Config.ini), Category, ID, Type, 
+EventTag (System, Application or Security), EventContent and AppTimestamp. -*JSON inside the UDP Syslog message*-
 
 ## Prerequisites:
 - Python v3*
