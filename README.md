@@ -30,3 +30,7 @@ no events will be lost because of increment.
 With AUTOADJUST_WFQOUT = True (recommend!) this time will be dinamically changing depending on the number of data gathered, for instance 
 sending fast if many messages events are waiting.
 - MAXCONTRIES is the number of consecutive failed connection tries to any Windows host before consider it has died.
+
+#### App Screenshot:
+
+![Alt Text](https://i.imgur.com/JhWwLZ2.png)
