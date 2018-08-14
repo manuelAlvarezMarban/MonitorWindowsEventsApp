@@ -27,7 +27,7 @@ In Config.ini we have a section to timing, sending Queue configuration, etc:
 - WFQ is the sending interval, so it´s the time that Queue will wait before send one event info message if it has someone.
 With AUTOADJUST_WFQOUT = True (recommend!) this time will be dinamically changing depending on the number of data gathered, for instance, sending fast if many messages events are waiting.
 - MAXCONTRIES is the number of consecutive failed connection tries to any Windows host before consider it has died.
-- AUTOADJUST_WFQTHRESHOLDFORSTART is the main auto adjust parameter for the queue. The lower, the greater will be the CPU consumption, cause the queue output will be faster. -Even so, depending on the queue size-.
+- AUTOADJUST_WFQTHRESHOLDFORSTART is the main auto adjust parameter for the queue. (Is an int related to the number of messages in queue) The lower, the greater will be the CPU consumption, cause the queue output will be faster. -Even so, depending on the queue size-.
 
 #### App Screenshot:
 
