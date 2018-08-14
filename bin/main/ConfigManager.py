@@ -18,7 +18,7 @@ def initAppConfig():
 
     #**************** Verifications:
 
-    if len(Config.sections()) != 5:
+    if len(Config.sections()) != 4:
         raise myExceptions.ConfigNumSections
 
     try:
