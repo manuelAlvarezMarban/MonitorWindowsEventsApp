@@ -12,7 +12,7 @@ The data gathered of Windows Events: EventDate, UserSid, ProcessSource, HostSour
 - Python path added to environment variables of Windows (automatic with Python latest versions installation) 
 
 ## Installing - Run:
-Only execute the startApp batch script with Python. (Must be in the project folder)
+Only execute the startApp batch script. (Must be in the project folder)
 
 ## Configuration:
 *Edit the Config.ini file under Config folder.*
