@@ -1,18 +1,17 @@
 # MonitorWindowsEventsApp
 Multi-thread app for Windows Events real-time monitoring of N hosts and information sending by UDP and RSyslog protocol to server.
 
-The app uses the PyWin modules for integrating Python and Windows in order to get Windows Events logs of all established hosts, 
-a Queue manager takes care of sending this information with UDP messages by RSyslog protocol (RFC 5424) to any final server or log collector. It uses sending intervals and auto-adjust for avoid data bursts problems, queue saturation, etc.
+The app uses the PyWin modules for integrating Python and Windows in order to get Windows Events logs, a Queue manager takes care of sending this information with UDP messages by RSyslog protocol (RFC 5424) to any final server or log collector. It uses sending intervals and auto-adjust for avoid data bursts problems, queue saturation, etc.
 
 The data gathered of Windows Events: EventDate, UserSid, ProcessSource, HostSource (defined in Config.ini), Category, ID, Type, EventTag (System, Application or Security), EventContent and AppTimestamp. -*included with JSON inside the UDP RSyslog message*-
 
 ## Prerequisites:
 - Python v3*
-- Windows System (because of Windows API dependencies)
+- Windows (because of Windows API dependencies)
 - Python path added to environment variables of Windows (automatic with Python latest versions installation) 
 
 ## Installing - Run:
-Only execute the startApp batch script. (Must be in the project folder)
+Only execute the startApp.bat
 
 ## Configuration:
 *Edit the Config.ini file under Config folder.*
