@@ -68,12 +68,10 @@ except Exception as e:
 initAppLogging(Config, __name__, InitDate)
 log = logging.getLogger(__name__)
 
-log.info('..Config for app loaded Ok..')
 
 #***********************************************************************************
 #************************************ Threads prepare ******************************
 #***********************************************************************************
-log.info('..Starting app Threads..')
 
 try:
 
@@ -87,15 +85,14 @@ try:
     for windowshost in windowshostsName:
         waddress = Config.get('MONITORWINDOWSHOSTS', windowshost)
         windowshostsAddress.append(waddress)
-        log.debug(windowshost+' to monitoring: '+waddress)
         weventsThread = EventsListenerThread (log, Config, windowshost, waddress, wq)
         weventsThread.setName(windowshost)
         WeventsThreads.append(weventsThread)
 
     WindowsNum = len(windowshostsAddress)
-    log.info(str(WindowsNum)+' host/s Windows will be listened.')
+    log.info(str(WindowsNum)+' host/s Windows.')
 
-    #************************************* Threads start ********************************
+    # ************************************* Threads start ********************************
     # *********(and add all threads to total list...)*************************************
 
     #starts all wlistener threads and the wqmanagerthread:
@@ -105,52 +102,54 @@ try:
         wthread.start()
         AppThreadList.append(wthread)
 
-    #*************************************************************************************************************
-    log.info(str(len(AppThreadList))+' threads will be used by the App.')
+    log.info('******************* Monitoring Windows Systems OK | (' + str(len(AppThreadList)) + ') Threads ********************')
 
-    log.info('**************************** App initiated. Monitoring Windows Systems. *****************************')
-    sys.exit(0)
-    #************* Monitoring that threads are alive during app execution: ****************
+    # *************************************************************************************
+    # ************* Monitoring that threads are alive during app execution: ***************
     # *************************************************************************************
 
     finish = False
-    closeCauseError = False         #App could be closed if one windows thread die..
+    closeCauseError = False                     #App could be closed if one windows thread die..
     while not finish:
 
-        sleep(120)    #Check threads state with 2 minutes period..
+        sleep(120)                              #Check threads state with 2 minutes period..
 
-        if closeCauseError:                #Close all Threads for finish app
+        if closeCauseError:                     #Close all Threads for finish app
             log.error('...Initiating app end cause some thread is died...')
             for wthread in WeventsThreads:
                 wthread.finishThread()
             wqManagerThread.setFinish(True)
             closeCauseError = False
 
-        #---------------------------------------------------
-        # ****** Windows Events threads monitoring ******
+
+        # -- Monitor Windows Host/s threads:
         wcont = 0
-
         for thread in WeventsThreads:
-            if not thread.is_alive():
-                #closeCauseError = True             #Discomment for closing app if Windows Host thread die
-                wcont += 1
-                if not any(thread.getName() in s for s in ThreadsAlerted):
-                    #--- (HERE some warning like mail sending could be done...)
-                    ThreadsAlerted.append(thread.getName())
-                    log.warn('[' + thread.getName() + '] Windows thread has died !')
 
+            if not thread.is_alive():
+
+                closeCauseError = True            #Closing app if Windows Host thread die
+                wcont += 1
+
+                if not any(thread.getName() in s for s in ThreadsAlerted):
+
+                    ThreadsAlerted.append(thread.getName())
+                    log.warning('[' + thread.getName() + '] Windows thread has died !')
+
+        # -- Monitor QueueManager thread:
         if not wqManagerThread.is_alive():
-            closeCauseError = True                 #App will not send info if Queue die
+            closeCauseError = True
             if not any(wqManagerThread.getName() in s for s in ThreadsAlerted):
                 ThreadsAlerted.append(wqManagerThread.getName())
-                log.warn('[' + thread.getName() + '] Queue thread has died !')
+                log.warning('[' + thread.getName() + '] Queue thread has died !')
 
         #--------------------------------------------------------------------------------------------------
         if wcont == WindowsNum:           #If all threads have ended, close the app.
-            log.warn('All threads has died. App will be closed.')
+            log.warning('All threads have died. App will be closed.')
             finish = True
 
-    log.warn('--- App has finished its execution!.---')
+    log.warning('--- App has finished its execution!---')
+
 
 except Exception as e:
     template = "An exception of type {0} occurred in Main. Arguments:\n{1!r}{2}"

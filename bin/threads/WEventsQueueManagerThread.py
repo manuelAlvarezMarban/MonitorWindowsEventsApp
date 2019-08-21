@@ -9,30 +9,35 @@ class WEventsQueueManager(Thread):
 
     def __init__(self, log, appConfig, WindowsEventsQueue):
 
-        self.myname = 'QueueManager'
-        self.log = log
-        self.wq = WindowsEventsQueue
-        self.appConfig = appConfig
-        self.finish = False
-        self.fqout = float(self.appConfig.get('MONITORWINDOWS', 'WFQ'))
-        self.syslog = SyslogSender.Syslog(appConfig.get('RSYSLOG', 'SYSTEMIP'),
+        self.myname = 'QueueManager'                                                        # Thread name
+        self.log = log                                                                      # App logging
+        self.wq = WindowsEventsQueue                                                        # Thread shared Queue
+        self.appConfig = appConfig                                                          # App config
+        self.finish = False                                                                 # Thread state
+        self.fqout = float(self.appConfig.get('MONITORWINDOWS', 'WFQ'))                     # Sampling time
+        self.syslog = SyslogSender.Syslog(appConfig.get('RSYSLOG', 'SYSTEMIP'),             # Syslog sender object
                                           appConfig.get('RSYSLOG', 'SYSTEMPORT'), 'WindowsEventWE',
                                           appConfig.get('RSYSLOG', 'DATAENCODE'))
         self.autoadjust = self.appConfig.get('MONITORWINDOWS', 'AUTOADJUST_WFQOUT')
-        if self.autoadjust == 'True' or 'true':
+        if self.autoadjust == 'True' or 'true':                                             # Auto adjust config
             self.fqoutstartwith = int(self.appConfig.get('MONITORWINDOWS', 'AUTOADJUST_WFQTHRESHOLDFORSTART'))
             self.autoadjustIncrement = self.appConfig.get('MONITORWINDOWS', 'AUTOADJUST_WFQOUT_INCREMENT')
             self.incrementmax = float(self.appConfig.get('MONITORWINDOWS', 'AUTOADJUST_WFQOUT_INCREMENTMAX'))
             self.fqoutstartwithTwoThird = int(((self.fqoutstartwith * 2) / 3) + 1)          # Two third for decide decrement amount
             self.fqoutstartwithThird = int((self.fqoutstartwith / 3) + 1)                   # One third decide increment
+
         Thread.__init__(self)
+
 
     def run(self):
 
-        '''
-        Sending Function. Use Syslog object
-        '''
+
         def sendOneRow(self):
+            '''
+            Sending Function. Use Syslog object
+            :param self:
+            :return:
+            '''
 
             # Extract one row of data from Queue to syslog sending to Graylog:
             msg = self.wq.get()
@@ -49,15 +54,15 @@ class WEventsQueueManager(Thread):
 
         #------------------------------------------------------------------------------------------------------------------
 
-        self.log.info('Thread for Sending Queue initiated. Sender rate: '+str(self.fqout)+' seconds.')
+        self.log.info('Queue Manager initiated. Sender rate: '+str(self.fqout)+' seconds.')
         while self.finish == False:
 
-            time.sleep(float(self.fqout))
+            time.sleep(self.fqout)
 
             try:
 
                 if (self.wq.qsize() == 0):
-                    #self.log.debug('\t\t WQueue empty! waiting for data..')
+                    # -- queue is empty --
                     pass
 
                 else:
@@ -67,12 +72,13 @@ class WEventsQueueManager(Thread):
 
 
             except Exception as e:
-                template = "An exception of type {0} occurred in QueueManagerThread. Arguments:\n{1!r}{2}"
-                message = template.format(type(e).__name__, e.args, traceback.format_exc())
-                self.log.error(message)
+
+                self.log.error('Error in Queue. ' + str(e))
                 continue
 
-                # AutoAdjust if it s activate:
+            # ------------------------------------
+            # --- AutoAdjust if it s activate: ---
+            # ------------------------------------
             try:
 
                 if self.autoadjust == 'True' or 'true':
@@ -110,9 +116,8 @@ class WEventsQueueManager(Thread):
                                             self.log.debug('AutoAdj - increase FQ= ' + ("%0.1f" % self.fqout) + ' sc')
 
             except Exception as e:
-                template = "An exception of type {0} occurred in QueueManagerThread - AutoadjustFQ. Arguments:\n{1!r}{2}"
-                message = template.format(type(e).__name__, e.args, traceback.format_exc())
-                self.log.error(message)
+
+                self.log.error('Error in Autoadjust. ' + str(e))
                 self.fqout = float( self.appConfig.get('MONITORWINDOWS', 'WFQ') )
                 continue
 
@@ -124,85 +129,10 @@ class WEventsQueueManager(Thread):
         self.log.info('[WindowsEventsQueueManager] thread has been finished, managing pending data!')
 
 
-    '''
-    Finish thread method
-    '''
     def setFinish(self,value):
-
-        self.finish = value
-        self.log.info('Thread for Sending Queue initiated. Sender rate: '+str(self.fqout)+' seconds.')
-        while self.finish == False:
-
-            time.sleep(float(self.fqout))
-
-            try:
-
-                if (self.wq.qsize() == 0):
-                    self.log.debug('\t\t WQueue empty! waiting for data..')
-
-                else:
-
-                    # Extract one row of data from Queue to syslog sending to Graylog:
-                    sendOneRow(self)
-
-
-            except Exception as e:
-                template = "An exception of type {0} occurred in QueueManagerThread. Arguments:\n{1!r}{2}"
-                message = template.format(type(e).__name__, e.args, traceback.format_exc())
-                self.log.error(message)
-                continue
-
-                # AutoAdjust if it s activate:
-            try:
-
-                if self.autoadjust == 'True' or 'true':
-                    if self.wq.qsize() >= self.fqoutstartwith:  # If size of queue bigger than 5, decrease fq in 5 sg else increase
-                        if self.fqout > 5.0:
-                            self.fqout = self.fqout - 5.0
-                            self.log.debug('AutoAdj - decrease FQ= ' + str(self.fqout) + ' sc')
-                        else:
-                            if self.wq.qsize() < 3:
-                                if self.fqout != 2.0:
-                                    self.fqout = 2.0
-                                    self.log.debug('AutoAdj - decrease FQ= ' + str(self.fqout) + ' sc')
-                            else:
-                                if self.fqout != 1.0:
-                                    self.fqout = 1.0
-                                    self.log.debug('AutoAdj - decrease to min FQ= ' + str(self.fqout) + ' sc')
-                    else:
-                        if self.autoadjustIncrement == 'True' or 'true':
-                            if self.wq.qsize() <= 2:
-                                if self.wq.qsize() == 0:
-                                    self.fqout = self.fqout + 5.0
-                                    if self.fqout > self.incrementmax:  # <-- Max Threshold
-                                        self.fqout = self.incrementmax
-                                    else:
-                                            self.log.debug('AutoAdj - increase FQ= ' + str(self.fqout) + ' sc')
-                                else:
-                                    self.fqout = self.fqout + 2.0
-                                    if self.fqout > self.incrementmax:
-                                        self.fqout = self.incrementmax
-                                    else:
-                                        self.log.debug('AutoAdj - increase FQ= ' + str(self.fqout) + ' sc')
-
-            except Exception as e:
-                template = "An exception of type {0} occurred in QueueManagerThread - AutoadjustFQ. Arguments:\n{1!r}{2}"
-                message = template.format(type(e).__name__, e.args, traceback.format_exc())
-                self.log.error(message)
-                self.fqout = 30.0
-                continue
-
-        #***************** THREAD END
-        # Send pending data to Graylog before thread ending:
-        for i in range(0, self.wq.qsize()):
-            sendOneRow(self)
-
-        self.log.info('[WindowsEventsQueueManager] thread has been finished, managing pending data!')
-
-
-    '''
-    Finish thread method
-    '''
-    def setFinish(self,value):
-
+        '''
+        Finish thread method.
+        :param value:
+        :return:
+        '''
         self.finish = value

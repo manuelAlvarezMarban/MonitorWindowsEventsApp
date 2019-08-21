@@ -11,7 +11,7 @@ class EventsListenerThread(Thread):
 
     def __init__(self, log, appConfig, windowshostname, windowshostaddress, wQueue):
 
-        #****************
+        #****************                                                          # Define Host Events State at start.
         def getNumOfEvents(self, eventType):
             log_handle = win32evtlog.OpenEventLog(self.waddress, eventType)
             total = win32evtlog.GetNumberOfEventLogRecords(log_handle)
@@ -19,52 +19,56 @@ class EventsListenerThread(Thread):
 
             return total
         # ****************
-        self.conTries = 0
-        self.handleInvalidCount = 0                                                 #Error tath occurs some times count
-        self.maxInvalidCount = 50
-        self.maxBurst = int(appConfig.get('MONITORWINDOWS', 'MAXBURSTEVENTS'))
-        self.maxConTries = int(appConfig.get('MONITORWINDOWS', 'MAXCONTRIES'))
-        self.log = log
-        self.appConfig = appConfig
-        self.wname = windowshostname
-        self.waddress = windowshostaddress
-        self.queue = wQueue
-        self.fs = appConfig.get('MONITORWINDOWS', 'WFS')
-        self.active = True
-        self.listenSystem = appConfig.get('WINDOWSEVENTS', 'SYSTEM')
-        self.listenApplication = appConfig.get('WINDOWSEVENTS', 'APPLICATION')
-        self.listenSecurity = appConfig.get('WINDOWSEVENTS', 'SECURITY')
+        self.conTries = 0                                                           # Remote host connection tries
+        self.maxBurst = int(appConfig.get('MONITORWINDOWS', 'MAXBURSTEVENTS'))      # Max sending burst
+        self.maxConTries = int(appConfig.get('MONITORWINDOWS', 'MAXCONTRIES'))      # Max Conn tries until consider host died
+        self.log = log                                                              # App logging
+        self.appConfig = appConfig                                                  # App config
+        self.wname = windowshostname                                                # Windows host name for this thread
+        self.waddress = windowshostaddress                                          # Windows host dir for this thread
+        self.queue = wQueue                                                         # Thread shared Queue
+        self.fs = float(appConfig.get('MONITORWINDOWS', 'WFS'))                     # Events sampling time
+        self.active = True                                                          # Thread State
+        self.listenSystem = appConfig.get('WINDOWSEVENTS', 'SYSTEM')                # Listen Windows System Events
+        self.listenApplication = appConfig.get('WINDOWSEVENTS', 'APPLICATION')      # Listen Windows App Events
+        self.listenSecurity = appConfig.get('WINDOWSEVENTS', 'SECURITY')            # Listen Windows Security Events
         self.SystemN = 0
         self.ApplicationN = 0
         self.SecurityN = 0
+
+        # -- Start thread:
         if self.listenSystem == ('True' or 'true'):
             try:
                 self.SystemN = getNumOfEvents(self, 'System')
             except Exception as e:
-                self.log.warn('Error: Couldnt access to System events in '+self.wname+'. Privileges?')
+                self.log.warning('Error: Couldnt access to System events in '+self.wname+'. Privileges?')
 
-        self.listenApplication = appConfig.get('WINDOWSEVENTS', 'APPLICATION')
         if self.listenApplication == ('True' or 'true'):
             try:
                 self.ApplicationN = getNumOfEvents(self, 'Application')
             except Exception as e:
-                self.log.warn('Error: Couldnt access to Application events in '+self.wname+'. Privileges?')
+                self.log.warning('Error: Couldnt access to Application events in '+self.wname+'. Privileges?')
 
-        self.listenSecurity = appConfig.get('WINDOWSEVENTS', 'SECURITY')
         if self.listenSecurity == ('True' or 'true'):
             try:
                 self.SecurityN = getNumOfEvents(self, 'Security')
             except Exception as e:
-                self.log.warn('Error: Couldnt access to Security events in '+self.wname+'. Privileges?')
+                self.log.warning('Error: Couldnt access to Security events in '+self.wname+'. Privileges?')
 
         Thread.__init__(self)
 
+
     def run(self):
 
-        '''
-        Update the events count
-        '''
+
         def updateCurrentNum(self, eventType, num):
+            '''
+            Update the events count.
+            :param self:
+            :param eventType:
+            :param num:
+            :return:
+            '''
 
             if eventType == 'System':
                 self.SystemN = num
@@ -76,22 +80,30 @@ class EventsListenerThread(Thread):
                 self.SecurityN = num
                 self.log.debug('Waiting next ' + eventType + 'Event: ' + str(self.SecurityN + 1))
 
-        '''
-        Get num of events
-        '''
+
         def getNumOfEvents(self, eventType):
+            '''
+            Get num of events.
+            :param self:
+            :param eventType:
+            :return:
+            '''
 
             log_handle = win32evtlog.OpenEventLog(self.waddress, eventType)
             total = win32evtlog.GetNumberOfEventLogRecords(log_handle)
             win32evtlog.CloseEventLog(log_handle)
-            self.handleInvalidCount = 0             #reset count
 
             return total
 
-        '''
-        Get events info
-        '''
+
         def getEventOfNumber(self, eventType, pendingEvents):
+            '''
+            Get events info.
+            :param self:
+            :param eventType:
+            :param pendingEvents:
+            :return:
+            '''
 
             def getNameOfType(type):
 
@@ -180,20 +192,25 @@ class EventsListenerThread(Thread):
                 try:
                     win32evtlog.CloseEventLog(log_handle)
                 except:
-                    #self.log.debug('Error al cerrar log tras excepcion! Controlador no valido ?')
                     pass
-                template = "An exception of type {0} occurred in EventsListenerThread(getEventsData). Arguments:\n{1!r}{2}"
-                message = template.format(type(e).__name__, e.args, traceback.format_exc())
+                self.log('Error with event info. ' + str(e))
                 eventDictsList.clear()                        #Return empty list to add nothing to QueueManager
 
             finally:
 
                 return eventDictsList
 
+
         def listenForNewEvent(self, eventType):
+            '''
+            Check if new event exists.
+            :param self:
+            :param eventType:
+            :return:
+            '''
 
             num = getNumOfEvents(self, eventType)
-            self.conTries = 0  # After OK reset connection tries (for consider or not Windows host died)
+            self.conTries = 0                                   # After OK reset connection tries
             if eventType == 'System':
                 currentNum = self.SystemN
             elif eventType == 'Application':
@@ -203,21 +220,32 @@ class EventsListenerThread(Thread):
 
 
             if num > currentNum:
+
                 if currentNum != 0:                             # Correct init care
-                    pendingEvents = num - currentNum            # Could be more than one new event since last sampling
-                    if pendingEvents > self.maxBurst:           # In server some times return anormal Number for App Events or care log rotation
+                    pendingEvents = num - currentNum            # New event could be more than one since last sampling
+
+                    if pendingEvents > self.maxBurst:
                         pendingEvents = 1
-                    self.log.info('('+self.wname+'-'+self.waddress+') '+str(pendingEvents)+' New Event/s of type: '+eventType+'!')
+                        self.log.warning('Max Burst Reached! Only one will be sent.')
+
+                    self.log.info('('+self.wname+'-'+self.waddress+') '+str(pendingEvents)+' New Event/s of type: '+eventType)
+
+                    # -- Put events in Queue and update state:
                     eventDictList = getEventOfNumber(self, eventType, pendingEvents)
                     for eventDict in eventDictList:
                         self.log.debug(eventDict)
                         if bool(eventDict):
                             self.queue.put(eventDict)           #Queue to send Event
                     updateCurrentNum(self, eventType, num)
+
                 else:
                     updateCurrentNum(self, eventType, num)
-                    self.log.debug('Numero de eventos fijado correctamente, estaba mal iniciado.')
+                    self.log.debug('Events count now correct, bad init.')
 
+
+        # ***************************************************************
+        # ********************* Thread Start ****************************
+        # ***************************************************************
         self.log.info('Initiated thread for Windows: '+self.wname+' ('+self.waddress+'). |sampling rate '+str(float(self.fs)*1000)+' msg| - Burst: '+str(self.maxBurst))
 
         while self.active:
@@ -225,7 +253,7 @@ class EventsListenerThread(Thread):
             #Start Events Monitoring
             try:
 
-                time.sleep(float(self.fs))
+                time.sleep(self.fs)
 
                 if self.listenSystem == ('True' or 'true'):
                     listenForNewEvent(self, 'System')
@@ -235,13 +263,12 @@ class EventsListenerThread(Thread):
                     listenForNewEvent(self, 'Security')
 
             except Exception as e:
-                template = "An exception of type {0} occurred in WindowsEventsListenerThread. Arguments:\n{1!r}{2}"
-                message = template.format(type(e).__name__, e.args, traceback.format_exc())
-
-                eventDict = {}
 
                 self.conTries += 1
-                self.log.warn('Error RPC connecting to Windows, ¿died? - tries ('+str(self.conTries)+'). Max: '+str(self.maxConTries))
+                self.log.warn('Error RPC connecting to Windows, ¿died? - tries (' + str(self.conTries) + '). Max: ' + str(self.maxConTries))
+
+                # -- Send Rsyslog with error too:
+                eventDict = {}
                 eventDict['EventDate'] = 'NO'
                 eventDict['UserSid'] = 'NO'
                 eventDict['ProcessSource'] = 'LogGatherApp'
@@ -250,24 +277,27 @@ class EventsListenerThread(Thread):
                 eventDict['ID'] = 'NO'
                 eventDict['Type'] = str(1) + ':' + 'Error'
                 eventDict['EventTag'] = 'WindowsEvent Error'
-                eventDict['EventContent'] = ['Error al pedir eventos Windows, intento '+str(self.conTries)]
+                eventDict['EventContent'] = ['Error:' + str(e) + ', Tries: '+str(self.conTries)]
                 mTime = strftime("%Y-%m-%d %H:%M:%S", localtime())
                 eventDict['AppTimestamp'] = mTime
 
                 if self.conTries == self.maxConTries:
                     self.log.warn('Max tries reached, '+self.waddress+' host will be considered died !')
                     eventDict['EventContent'] = ['Max connection tries with Windows reached, '+str(self.wname+'-'+self.waddress)+' will be considered died !']
-                    self.active = False                   #Close this thread, windows system died
+                    self.active = False                   #Close this thread, windows system died...
 
                 if bool(eventDict):
                     self.queue.put(eventDict)
                     time.sleep(30)                        #Wait to let Windows system recover after get events exception
 
-                else:
-                    self.log.error(message)
 
         self.log.warn('Events thread of '+self.wname+ ' has finished !')
 
+
     def finishThread(self):
+        '''
+        End Thread.
+        :return:
+        '''
 
         self.active = False
