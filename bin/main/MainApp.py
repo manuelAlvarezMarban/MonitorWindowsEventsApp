@@ -58,9 +58,8 @@ try:
     Config = initAppConfig()
 
 except Exception as e:
-    template = "An exception of type {0} occurred in Main. Starting Config. Arguments:\n{1!r}{2}"
-    message = template.format(type(e).__name__, e.args, traceback.format_exc())
-    print(message)
+
+    print('Error in Config. ' + str(e))
     print('\n--- App cannot start ---')
     sys.exit(-1)
 
@@ -152,6 +151,7 @@ try:
 
 
 except Exception as e:
+
     template = "An exception of type {0} occurred in Main. Arguments:\n{1!r}{2}"
     message = template.format(type(e).__name__, e.args, traceback.format_exc())
     log.error(message)

@@ -18,6 +18,6 @@ class ConfigOptionMustBeInt(Exception):
 
 class NoWindowsHosts(Exception):
     def __init__(self):
-        self.message = 'No Windows hosts in Config file!'
+        self.message = 'No Windows host/s in Config file!'
     def __str__(self):
         return self.message

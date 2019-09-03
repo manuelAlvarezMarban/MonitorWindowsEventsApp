@@ -21,18 +21,28 @@ def initAppConfig():
     if len(Config.sections()) != 4:
         raise myExceptions.ConfigNumSections
 
-    try:
-        int(Config.get('MONITORWINDOWS', 'AUTOADJUST_WFQTHRESHOLDFORSTART'))
-    except:
-        raise myExceptions.ConfigOptionMustBeInt('AUTOADJUST_WFQTHRESHOLDFORSTART')
-    try:
-        int(Config.get('MONITORWINDOWS', 'MAXCONTRIES'))
-    except:
-        raise myExceptions.ConfigOptionMustBeInt('MAXCONTRIES')
-    try:
-        int(Config.get('MONITORWINDOWS', 'MAXBURSTEVENTS'))
-    except:
-        raise myExceptions.ConfigOptionMustBeInt('MAXBURSTEVENTS')
+    # Must be int:
+    list_check_ifint = [
+        ('RSYSLOG', 'SYSTEMPORT'),
+        ('MONITORWINDOWS', 'AUTOADJUST_WFQTHRESHOLDFORSTART'),
+        ('MONITORWINDOWS', 'MAXCONTRIES'),
+        ('MONITORWINDOWS', 'MAXBURSTEVENTS')
+    ]
+
+    def intCheck(sectionname, optionname):
+        '''
+        int checker.
+        :param sectionname:
+        :param optionname:
+        :return:
+        '''
+
+        try:
+            int(Config.get(sectionname, optionname))
+        except:
+            raise myExceptions.ConfigOptionMustBeInt(optionname)
+
+    [intCheck(i[0], i[1]) for i in list_check_ifint]  # Verification with list comprehension
 
     #Check windows hosts for events monitoring:
     if len(Config.options('MONITORWINDOWSHOSTS')) == 0:
