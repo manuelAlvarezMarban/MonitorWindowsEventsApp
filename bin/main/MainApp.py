@@ -67,6 +67,7 @@ except Exception as e:
 initAppLogging(Config, __name__, InitDate)
 log = logging.getLogger(__name__)
 
+log.info('UDP Destination-> ' + Config.get('RSYSLOG', 'SYSTEMIP') + ':' + Config.get('RSYSLOG', 'SYSTEMPORT'))
 
 #***********************************************************************************
 #************************************ Threads prepare ******************************
@@ -89,7 +90,7 @@ try:
         WeventsThreads.append(weventsThread)
 
     WindowsNum = len(windowshostsAddress)
-    log.info(str(WindowsNum)+' host/s Windows.')
+    log.info(str(WindowsNum)+' Windows.')
 
     # ************************************* Threads start ********************************
     # *********(and add all threads to total list...)*************************************

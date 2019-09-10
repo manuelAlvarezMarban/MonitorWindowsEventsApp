@@ -1,8 +1,9 @@
 #-*- coding: iso-8859-1 -*-
 from threading import Thread
-import time, traceback, sys
+import time
 from time import localtime, strftime
 import win32.win32evtlog as win32evtlog, win32.win32security as win32security, win32.win32event as win32event
+import win32api
 
 '''
 Thread for monitoring of one Windows Host Events -> eventvwr.msc (Events Reg)
@@ -13,47 +14,59 @@ class EventsListenerThread(Thread):
 
         #****************                                                          # Define Host Events State at start.
         def getNumOfEvents(self, eventType):
+            '''
+            Get current event id/num.
+            :param self:
+            :param eventType:
+            :return:
+            '''
+
             log_handle = win32evtlog.OpenEventLog(self.waddress, eventType)
             total = win32evtlog.GetNumberOfEventLogRecords(log_handle)
             win32evtlog.CloseEventLog(log_handle)
 
             return total
         # ****************
-        self.conTries = 0                                                           # Remote host connection tries
-        self.maxBurst = int(appConfig.get('MONITORWINDOWS', 'MAXBURSTEVENTS'))      # Max sending burst
-        self.maxConTries = int(appConfig.get('MONITORWINDOWS', 'MAXCONTRIES'))      # Max Conn tries until consider host died
-        self.log = log                                                              # App logging
-        self.appConfig = appConfig                                                  # App config
-        self.wname = windowshostname                                                # Windows host name for this thread
-        self.waddress = windowshostaddress                                          # Windows host dir for this thread
-        self.queue = wQueue                                                         # Thread shared Queue
-        self.fs = float(appConfig.get('MONITORWINDOWS', 'WFS'))                     # Events sampling time
-        self.active = True                                                          # Thread State
-        self.listenSystem = appConfig.get('WINDOWSEVENTS', 'SYSTEM')                # Listen Windows System Events
-        self.listenApplication = appConfig.get('WINDOWSEVENTS', 'APPLICATION')      # Listen Windows App Events
-        self.listenSecurity = appConfig.get('WINDOWSEVENTS', 'SECURITY')            # Listen Windows Security Events
+        self.conTries = 0                                                                                                       # Remote host connection tries
+        self.maxBurst = int(appConfig.get('MONITORWINDOWS', 'MAXBURSTEVENTS'))                                                  # Max sending burst
+        self.maxConTries = int(appConfig.get('MONITORWINDOWS', 'MAXCONTRIES'))                                                  # Max Conn tries until consider host died
+        self.log = log                                                                                                          # App logging
+        self.appConfig = appConfig                                                                                              # App config
+        self.wname = windowshostname                                                                                            # Windows host name for this thread
+        self.waddress = windowshostaddress                                                                                      # Windows host dir for this thread
+        self.queue = wQueue                                                                                                     # Thread shared Queue
+        self.fs = float(appConfig.get('MONITORWINDOWS', 'WFS'))                                                                 # Events sampling time
+        self.active = True                                                                                                      # Thread State
+        self.listenSystem = True if appConfig.get('WINDOWSEVENTS', 'SYSTEM') == ('True' or 'true') else False                   # Listen Windows System Events
+        self.listenApplication = True if appConfig.get('WINDOWSEVENTS', 'APPLICATION') == ('True' or 'true') else False         # Listen Windows App Events
+        self.listenSecurity = True if appConfig.get('WINDOWSEVENTS', 'SECURITY') == ('True' or 'true') else False               # Listen Windows Security Events
         self.SystemN = 0
         self.ApplicationN = 0
         self.SecurityN = 0
 
         # -- Start thread:
-        if self.listenSystem == ('True' or 'true'):
+        if self.listenSystem:
             try:
                 self.SystemN = getNumOfEvents(self, 'System')
             except Exception as e:
                 self.log.warning('Error: Couldnt access to System events in '+self.wname+'. Privileges?')
 
-        if self.listenApplication == ('True' or 'true'):
+        if self.listenApplication:
             try:
                 self.ApplicationN = getNumOfEvents(self, 'Application')
             except Exception as e:
                 self.log.warning('Error: Couldnt access to Application events in '+self.wname+'. Privileges?')
 
-        if self.listenSecurity == ('True' or 'true'):
+        if self.listenSecurity:
             try:
                 self.SecurityN = getNumOfEvents(self, 'Security')
             except Exception as e:
                 self.log.warning('Error: Couldnt access to Security events in '+self.wname+'. Privileges?')
+
+        if win32api.GetVersion() & 0x80000000:
+            print ("App only runs on WindowsNT family.")
+            self.active = False
+            return
 
         Thread.__init__(self)
 
@@ -133,6 +146,7 @@ class EventsListenerThread(Thread):
 
                     #------------------------ Extract as many events as are pending ---------------------------:
                     for i in range (pendingEvents):
+
                         event = events[i]
 
                         #***************** Extract Event data:
@@ -232,6 +246,8 @@ class EventsListenerThread(Thread):
 
                     # -- Put events in Queue and update state:
                     eventDictList = getEventOfNumber(self, eventType, pendingEvents)
+                    if not eventDictList:
+                        self.log.warning(' ---- Event info empty or incorrect! (PyWin/Windows API error?) ----')
                     for eventDict in eventDictList:
                         self.log.debug(eventDict)
                         if bool(eventDict):
@@ -255,11 +271,11 @@ class EventsListenerThread(Thread):
 
                 time.sleep(self.fs)
 
-                if self.listenSystem == ('True' or 'true'):
+                if self.listenSystem:
                     listenForNewEvent(self, 'System')
-                if self.listenApplication == ('True' or 'true'):
+                if self.listenApplication:
                     listenForNewEvent(self, 'Application')
-                if self.listenSecurity == ('True' or 'true'):
+                if self.listenSecurity:
                     listenForNewEvent(self, 'Security')
 
             except Exception as e:
